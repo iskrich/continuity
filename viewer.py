@@ -9,13 +9,46 @@ from movie import *
 class TimelineArea(QScrollArea):
 	def __init__(self, parent):
 		QScrollArea.__init__(self, parent)
+		self.playButton = QPushButton('Play', self)
+		self.playButton.move(5,5)
+		self.playButton.clicked.connect(self.playButtonEvent)
+		
+		self.isPlay = False
+		self.currentFPS = 8 #mb another default?
 
 	def keyPressEvent(self, ev):
 		if ev.key() == Qt.Key_Space:
-			# TODO: bounds checking
-			movie.currFrame = movie.currFrame + 1
-			self.parent().parent().selectionChanged.emit()
+			self.visualNextFrame()
 		return QScrollArea.keyPressEvent(self, ev)
+	
+	def playButtonEvent(self):
+		if not self.isPlay:
+			self.isPlay = True
+			self.playButton.setText("Stop")
+			self.play()
+		else:
+			self.isPlay = False
+			self.playButton.setText("Play")
+	
+	def play(self):
+		try:
+			self.visualNextFrame()
+		finally:
+			if (self.isPlay):
+				tempo = movie.frames[movie.currFrame].tempo
+				if (tempo!=0):
+					if tempo>161: #Delay Signal
+						QTimer.singleShot((256-tempo)*1000, self.play)
+						return
+					elif tempo<60: #FPS Signal
+						self.currentFPS = tempo
+				QTimer.singleShot(1000.0/self.currentFPS, self.play)
+	
+	def visualNextFrame(self):
+		if movie.currFrame == len(movie.frames)-1:
+				movie.currFrame = -1 #start new loop
+		movie.currFrame = movie.currFrame + 1
+		self.parent().parent().selectionChanged.emit()
 
 class MyMainWindow(QMainWindow):
 	selectionChanged = Signal()
